@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | Get in Touch</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fafafa;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+      background: #ffffff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .required {
+      color: #dc3545;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px 24px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: #43a047;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .success-message {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .success-message .icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+
+    .success-message h2 {
+      color: #4CAF50;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .success-message p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .form-content.hidden {
+      display: none;
+    }
+
+    .error-message {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .privacy-note {
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      body {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Get in Touch</h1>
+      <p>We'd love to hear from you. Fill out the form below.</p>
+    </div>
+
+    <form id="contactForm" class="form-content">
+      <div class="form-group">
+        <label for="name">Name <span class="required">*</span></label>
+        <input type="text" id="name" name="name" required placeholder="Your full name">
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number <span class="required">*</span></label>
+        <input type="tel" id="phone" name="phone" required placeholder="+1 (555) 123-4567">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address <span class="required">*</span></label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com">
+      </div>
+
+      <div class="form-group">
+        <label for="message">What are you looking for? <span class="required">*</span></label>
+        <textarea id="message" name="message" required placeholder="Tell us about your needs..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="source">How did you hear about us?</label>
+        <select id="source" name="source">
+          <option value="">Select an option</option>
+          <option value="Website Form">Search Engine (Google, Bing)</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Instagram">Instagram</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Referral">Friend / Referral</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <button type="submit" id="submitBtn">
+        Send Message
+      </button>
+
+      <p class="error-message" id="errorMessage">
+        Something went wrong. Please try again.
+      </p>
+
+      <p class="privacy-note">
+        By submitting this form, you agree to be contacted regarding your inquiry.
+      </p>
+    </form>
+
+    <div class="success-message" id="successMessage">
+      <div class="icon">✓</div>
+      <h2>Thank You!</h2>
+      <p>We've received your message and will get back to you shortly.</p>
+    </div>
+  </div>
+
+  <script>
+    // Configuration - UPDATE THIS WITH YOUR n8n WEBHOOK URL
+    const WEBHOOK_URL = 'http://localhost:5678/webhook/lead-intake';
+
+    // Check if running from file:// protocol
+    if (window.location.protocol === 'file:') {
+      console.warn('WARNING: This form is running from a file:// URL which may cause CORS issues.');
+      console.warn('To fix: Run "python -m http.server 8080" in the forms folder, then open http://localhost:8080/tally-embed.html');
+    }
+
+    const form = document.getElementById('contactForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Disable button and show loading
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span>Sending...';
+      errorMessage.style.display = 'none';
+
+      // Gather form data
+      const formData = {
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        message: document.getElementById('message').value.trim(),
+        source: document.getElementById('source').value || 'Website Form',
+        timestamp: new Date().toISOString(),
+        utm_source: new URLSearchParams(window.location.search).get('utm_source') || '',
+        utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || '',
+        utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || '',
+        referrer: document.referrer || ''
+      };
+
+      // Debug: Log data being sent
+      console.log('Sending form data:', formData);
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+          body: JSON.stringify(formData)
+        });
+
+        console.log('Response status:', response.status);
+
+        if (response.ok) {
+          const result = await response.json().catch(() => ({}));
+          console.log('Response data:', result);
+          // Show success message
+          form.classList.add('hidden');
+          successMessage.classList.add('show');
+        } else {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error('Server error:', errorText);
+          throw new Error('Submission failed: ' + errorText);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        errorMessage.textContent = error.message || 'Something went wrong. Please try again.';
+        errorMessage.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Send Message';
+      }
+    });
+
+    // Phone number formatting
+    document.getElementById('phone').addEventListener('input', (e) => {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 0) {
+        if (value.length <= 3) {
+          value = `(${value}`;
+        } else if (value.length <= 6) {
+          value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+        } else {
+          value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+        }
+      }
+      e.target.value = value;
+    });
+  </script>
+
+  <!--
+    ALTERNATIVE: TALLY.SO EMBED
+
+    If you prefer to use Tally.so instead of the custom form above,
+    replace the entire <form> and success message with this embed code:
+
+    1. Create a form at https://tally.so with these fields:
+       - Name (Short text, required)
+       - Phone (Short text, required)
+       - Email (Email, required)
+       - What are you looking for? (Long text, required)
+       - How did you hear about us? (Dropdown with options)
+
+    2. In Tally settings, add a webhook integration pointing to:
+       YOUR_N8N_WEBHOOK_URL/webhook/lead-intake
+
+    3. Replace the form with:
+
+    <iframe
+      data-tally-src="https://tally.so/embed/YOUR_TALLY_FORM_ID?alignLeft=1&hideTitle=1&transparentBackground=1"
+      loading="lazy"
+      width="100%"
+      height="500"
+      frameborder="0"
+      marginheight="0"
+      marginwidth="0"
+      title="Contact Form">
+    </iframe>
+    <script>
+      var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s)}
+    </script>
+  -->
+</body>
+
+</html>

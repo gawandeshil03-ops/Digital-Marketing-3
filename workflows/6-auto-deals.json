@@ -1,0 +1,168 @@
+{
+  "name": "6 - Auto Deal Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "minutes", "minutesInterval": 5}]
+        }
+      },
+      "id": "ad111111-1111-4372-a567-0e02b2c3d479",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {
+          "qs": {
+            "filterByFormula": "=AND({Status}='Converted', NOT({DealCreated}))"
+          }
+        }
+      },
+      "id": "ad222222-2222-8901-bcde-f23456789012",
+      "name": "Get Converted Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $json.records.length }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }]
+        }
+      },
+      "id": "ad333333-3333-9012-cdef-345678901234",
+      "name": "Any Converted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.all()[0];\n\n// Handle API errors gracefully\nif (!input || !input.json) {\n  throw new Error('No input data received from previous node');\n}\n\nconst records = input.json.records;\n\n// Handle missing or empty records\nif (!records || !Array.isArray(records) || records.length === 0) {\n  return []; // Return empty array to stop processing\n}\n\nreturn records.map(record => {\n  // Validate record structure\n  if (!record || !record.fields) {\n    throw new Error('Invalid record structure: missing fields');\n  }\n  \n  return {\n    json: {\n      contact_id: record.id,\n      contact_name: record.fields.Name || 'Unknown',\n      contact_email: record.fields.Email || '',\n      contact_phone: record.fields.Phone || '',\n      source: record.fields.Source || 'Unknown',\n      score: record.fields.LeadScore || 0\n    }\n  };\n});"
+      },
+      "id": "ad444444-4444-0123-defa-456789012345",
+      "name": "Split Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Deals",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Contact: [$json.contact_id], Product_Service: 'Deal - ' + $json.contact_name, Stage: 'New', ExpectedClose: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0], Notes: 'Auto-created from converted lead. Source: ' + $json.source + '. Score: ' + $json.score + '/10' } }) }}"
+      },
+      "id": "ad555555-5555-1234-efab-567890123456",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts/{{ $('Split Records').item.json.contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"fields\":{\"DealCreated\":true}}"
+      },
+      "id": "ad666666-6666-2345-fabc-678901234567",
+      "name": "Mark Deal Created",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Interactions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Contact: [$('Split Records').item.json.contact_id], Type: 'Note', Direction: 'Outbound', Summary: 'Deal created - Lead converted', Details: 'Deal created for: ' + $('Split Records').item.json.contact_name, Timestamp: new Date().toISOString(), Outcome: 'Positive' } }) }}"
+      },
+      "id": "ad777777-7777-3456-abcd-789012345678",
+      "name": "Log Deal Creation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "ad888888-8888-4567-bcde-890123456789",
+      "name": "No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [[{"node": "Get Converted Contacts", "type": "main", "index": 0}]]
+    },
+    "Get Converted Contacts": {
+      "main": [[{"node": "Any Converted?", "type": "main", "index": 0}]]
+    },
+    "Any Converted?": {
+      "main": [
+        [{"node": "Split Records", "type": "main", "index": 0}],
+        [{"node": "No Action", "type": "main", "index": 0}]
+      ]
+    },
+    "Split Records": {
+      "main": [[{"node": "Create Deal", "type": "main", "index": 0}]]
+    },
+    "Create Deal": {
+      "main": [[{"node": "Mark Deal Created", "type": "main", "index": 0}]]
+    },
+    "Mark Deal Created": {
+      "main": [[{"node": "Log Deal Creation", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "2"
+}

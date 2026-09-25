@@ -1,0 +1,160 @@
+{
+  "name": "2 - Lead Scoring",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1b2c3d4-1111-4372-a567-0e02b2c3d479",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data directly from trigger - no need for extra API call\nconst triggerData = $input.first().json;\n\n// Extract contact_id from multiple possible locations\nconst contactId = triggerData.contact_id || triggerData.id || '';\n\nif (!contactId) {\n  throw new Error('Missing contact_id in trigger data: ' + JSON.stringify(triggerData));\n}\n\n// Extract lead data - handle both direct lead_data and flat structure\nlet lead = {};\n\nif (triggerData.lead_data) {\n  // Data passed via lead_data object\n  lead = {\n    name: triggerData.lead_data.name || triggerData.contact_name || '',\n    phone: triggerData.lead_data.phone || '',\n    email: triggerData.lead_data.email || '',\n    source: triggerData.lead_data.source || 'Unknown',\n    message: triggerData.lead_data.message || '',\n    interactions: triggerData.lead_data.interaction_count || 1\n  };\n} else {\n  // Flat structure fallback\n  lead = {\n    name: triggerData.name || triggerData.contact_name || '',\n    phone: triggerData.phone || '',\n    email: triggerData.email || '',\n    source: triggerData.source || 'Unknown',\n    message: triggerData.message || '',\n    interactions: triggerData.interaction_count || 1\n  };\n}\n\nlet score = 0;\nlet reasons = [];\n\n// Phone scoring (clean phone number)\nconst cleanPhone = (lead.phone || '').toString().replace(/\\D/g, '');\nif (cleanPhone.length >= 10) {\n  score += 2;\n  reasons.push('has phone');\n}\n\n// Email scoring\nif (lead.email && lead.email.includes('@')) {\n  score += 1;\n  reasons.push('has email');\n}\n\n// Message intent scoring\nconst msg = (lead.message || '').toLowerCase();\nconst buyingKeywords = ['buy', 'price', 'cost', 'interested', 'want', 'need', 'purchase', 'quote'];\nconst serviceKeywords = ['website', 'build', 'develop', 'product', 'service', 'demo', 'appointment', 'meeting', 'call'];\n\nif (buyingKeywords.some(k => msg.includes(k))) {\n  score += 3;\n  reasons.push('buying intent');\n}\n\nif (serviceKeywords.some(k => msg.includes(k))) {\n  score += 2;\n  reasons.push('specific inquiry');\n}\n\n// Engagement scoring\nif (lead.interactions > 1) {\n  score += 1;\n  reasons.push('returning');\n}\n\nif ((lead.message || '').length > 50) {\n  score += 1;\n  reasons.push('detailed');\n}\n\n// Normalize score between 1-10\nscore = Math.min(10, Math.max(1, score));\n\n// Determine tier and action\nconst tier = score >= 8 ? 'Hot' : score >= 5 ? 'Warm' : 'Cold';\nconst action = tier === 'Hot' ? 'Call immediately' : tier === 'Warm' ? 'Send follow-up within 24h' : 'Add to nurture sequence';\n\nreturn {\n  json: {\n    contact_id: contactId,\n    score: score,\n    tier: tier,\n    reason: reasons.join(', ') || 'New lead',\n    suggested_action: action,\n    lead_data: lead\n  }\n};"
+      },
+      "id": "score-lead-rule-based-1111-111111",
+      "name": "Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts/{{ $json.contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { LeadScore: $json.score, Tier: $json.tier, ScoringReason: $json.reason, SuggestedAction: $json.suggested_action } }) }}"
+      },
+      "id": "b8c9d0e1-8888-4567-bcde-890123456789",
+      "name": "Update Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Score Lead').item.json.score }}",
+              "rightValue": 8,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        }
+      },
+      "id": "c9d0e1f2-9999-5678-cdef-901234567890",
+      "name": "Is Hot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Score Lead').item.json;\nreturn {\n  json: {\n    alert_type: 'hot_lead',\n    contact_data: {\n      contact_id: data.contact_id,\n      name: data.lead_data.name,\n      phone: data.lead_data.phone,\n      email: data.lead_data.email,\n      interest: data.lead_data.message,\n      score: data.score,\n      suggested_action: data.suggested_action\n    }\n  }\n};"
+      },
+      "id": "e1f2a3b4-bbbb-7890-efab-123456789012",
+      "name": "Prepare Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "4 - Owner Alerts"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "d0e1f2a3-aaaa-6789-defa-012345678901",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Score Lead').item.json;\nreturn {\n  json: {\n    contact_id: data.contact_id,\n    tier: data.tier.toLowerCase(),\n    name: data.lead_data.name,\n    phone: data.lead_data.phone,\n    email: data.lead_data.email,\n    interest: data.lead_data.message,\n    score: data.score,\n    suggested_action: data.suggested_action\n  }\n};"
+      },
+      "id": "a3b4c5d6-dddd-9012-abcd-345678901234",
+      "name": "Prepare Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "3 - Follow-up Sequences"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "f2a3b4c5-cccc-8901-fabc-234567890123",
+      "name": "Start Follow-up",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1440, 400]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Score Lead", "type": "main", "index": 0}]]
+    },
+    "Score Lead": {
+      "main": [[{"node": "Update Score", "type": "main", "index": 0}]]
+    },
+    "Update Score": {
+      "main": [[{"node": "Is Hot?", "type": "main", "index": 0}]]
+    },
+    "Is Hot?": {
+      "main": [
+        [{"node": "Prepare Alert", "type": "main", "index": 0}],
+        [{"node": "Prepare Follow-up", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare Alert": {
+      "main": [[{"node": "Send Alert", "type": "main", "index": 0}]]
+    },
+    "Send Alert": {
+      "main": [[{"node": "Prepare Follow-up", "type": "main", "index": 0}]]
+    },
+    "Prepare Follow-up": {
+      "main": [[{"node": "Start Follow-up", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "5"
+}

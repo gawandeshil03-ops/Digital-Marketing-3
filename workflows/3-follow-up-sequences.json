@@ -1,0 +1,337 @@
+{
+  "name": "3 - Follow-up Sequences",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1111111-1111-4372-a567-0e02b2c3d479",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": false, "typeValidation": "loose"},
+                "combinator": "and",
+                "conditions": [{"leftValue": "={{ $json.tier }}", "rightValue": "hot", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "hot"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false, "typeValidation": "loose"},
+                "combinator": "and",
+                "conditions": [{"leftValue": "={{ $json.tier }}", "rightValue": "warm", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "warm"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false, "typeValidation": "loose"},
+                "combinator": "and",
+                "conditions": [{"leftValue": "={{ $json.tier }}", "rightValue": "cold", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "cold"
+            }
+          ]
+        }
+      },
+      "id": "b2222222-2222-8901-bcde-f23456789012",
+      "name": "Route by Tier",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Execute Workflow Trigger').item.json;\nconst subject = `Great to hear from you, ${lead.name}!`;\nconst body = `Hi ${lead.name},\\n\\nThank you for reaching out! I noticed you're interested in ${lead.interest || 'our services'} and I'm excited to help.\\n\\nI'd love to schedule a quick call to discuss how we can best meet your needs. What time works best for you today or tomorrow?\\n\\nLooking forward to connecting!\\n\\nBest regards,\\nYour Business Team`;\n\nreturn { json: { subject, body, to: lead.email, contact_id: lead.contact_id, tier: 'Hot' } };"
+      },
+      "id": "hot-template-1111-1111-111111111111",
+      "name": "Hot Email Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}"
+      },
+      "id": "f6666666-6666-2345-fabc-678901234567",
+      "name": "Send Hot Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [920, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Interactions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Contact: [$('Execute Workflow Trigger').item.json.contact_id], Type: 'Email Sent', Direction: 'Outbound', Summary: 'Hot lead follow-up', Details: $('Hot Email Template').item.json.subject, Timestamp: new Date().toISOString(), Outcome: 'Sent' } }) }}"
+      },
+      "id": "log-hot-email-1111-1111-111111111111",
+      "name": "Log Hot Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts/{{ $('Execute Workflow Trigger').item.json.contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"fields\":{\"Status\":\"Contacted\"}}"
+      },
+      "id": "a7777777-7777-3456-abcd-789012345678",
+      "name": "Update Hot Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {"amount": 24, "unit": "hours"},
+      "id": "b8888888-8888-4567-bcde-890123456789",
+      "name": "Wait 24h",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Execute Workflow Trigger').item.json;\nconst subject = `Following up on your inquiry, ${lead.name}`;\nconst body = `Hi ${lead.name},\\n\\nI wanted to follow up on your recent inquiry about ${lead.interest || 'our services'}.\\n\\nDo you have any questions I can help answer? I'm happy to provide more information or schedule a quick chat at your convenience.\\n\\nBest regards,\\nYour Business Team`;\n\nreturn { json: { subject, body, to: lead.email, contact_id: lead.contact_id, tier: 'Warm' } };"
+      },
+      "id": "warm-template-2222-2222-222222222222",
+      "name": "Warm Email Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 400]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}"
+      },
+      "id": "fcccccccc-cccc-8901-fabc-234567890123",
+      "name": "Send Warm Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1140, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Interactions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Contact: [$('Execute Workflow Trigger').item.json.contact_id], Type: 'Email Sent', Direction: 'Outbound', Summary: 'Warm lead follow-up', Details: $('Warm Email Template').item.json.subject, Timestamp: new Date().toISOString(), Outcome: 'Sent' } }) }}"
+      },
+      "id": "log-warm-email-2222-2222-222222222222",
+      "name": "Log Warm Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 400],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts/{{ $('Execute Workflow Trigger').item.json.contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"fields\":{\"Status\":\"Nurturing\"}}"
+      },
+      "id": "e2222222-2222-3456-efab-789012345678",
+      "name": "Update Warm Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1580, 400],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {"amount": 72, "unit": "hours"},
+      "id": "f3333333-3333-4567-fabc-890123456789",
+      "name": "Wait 72h",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [700, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Execute Workflow Trigger').item.json;\nconst subject = `A quick resource for you, ${lead.name}`;\nconst body = `Hi ${lead.name},\\n\\nI hope this finds you well. I wanted to share some helpful information that might be relevant to your needs.\\n\\nIf you're ever interested in learning more, feel free to reach out. No pressure at all!\\n\\nWishing you the best,\\nYour Business Team`;\n\nreturn { json: { subject, body, to: lead.email, contact_id: lead.contact_id, tier: 'Cold' } };"
+      },
+      "id": "cold-template-3333-3333-333333333333",
+      "name": "Cold Email Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 600]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}"
+      },
+      "id": "d7777777-7777-8901-defa-234567890123",
+      "name": "Send Cold Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1140, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Interactions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Contact: [$('Execute Workflow Trigger').item.json.contact_id], Type: 'Email Sent', Direction: 'Outbound', Summary: 'Cold lead re-engagement', Details: $('Cold Email Template').item.json.subject, Timestamp: new Date().toISOString(), Outcome: 'Sent' } }) }}"
+      },
+      "id": "log-cold-email-3333-3333-333333333333",
+      "name": "Log Cold Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 600],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts/{{ $('Execute Workflow Trigger').item.json.contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"fields\":{\"Status\":\"Cold Outreach\"}}"
+      },
+      "id": "e8888888-8888-9012-efab-345678901234",
+      "name": "Update Cold Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1580, 600],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Route by Tier", "type": "main", "index": 0}]]
+    },
+    "Route by Tier": {
+      "main": [
+        [{"node": "Hot Email Template", "type": "main", "index": 0}],
+        [{"node": "Wait 24h", "type": "main", "index": 0}],
+        [{"node": "Wait 72h", "type": "main", "index": 0}]
+      ]
+    },
+    "Hot Email Template": {
+      "main": [[{"node": "Send Hot Email", "type": "main", "index": 0}]]
+    },
+    "Send Hot Email": {
+      "main": [[{"node": "Log Hot Email", "type": "main", "index": 0}]]
+    },
+    "Log Hot Email": {
+      "main": [[{"node": "Update Hot Status", "type": "main", "index": 0}]]
+    },
+    "Wait 24h": {
+      "main": [[{"node": "Warm Email Template", "type": "main", "index": 0}]]
+    },
+    "Warm Email Template": {
+      "main": [[{"node": "Send Warm Email", "type": "main", "index": 0}]]
+    },
+    "Send Warm Email": {
+      "main": [[{"node": "Log Warm Email", "type": "main", "index": 0}]]
+    },
+    "Log Warm Email": {
+      "main": [[{"node": "Update Warm Status", "type": "main", "index": 0}]]
+    },
+    "Wait 72h": {
+      "main": [[{"node": "Cold Email Template", "type": "main", "index": 0}]]
+    },
+    "Cold Email Template": {
+      "main": [[{"node": "Send Cold Email", "type": "main", "index": 0}]]
+    },
+    "Send Cold Email": {
+      "main": [[{"node": "Log Cold Email", "type": "main", "index": 0}]]
+    },
+    "Log Cold Email": {
+      "main": [[{"node": "Update Cold Status", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "5"
+}

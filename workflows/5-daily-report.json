@@ -1,0 +1,111 @@
+{
+  "name": "5 - Daily Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 20 * * *"}]
+        }
+      },
+      "id": "dr111111-1111-4372-a567-0e02b2c3d479",
+      "name": "Daily 8 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {
+          "qs": {"filterByFormula": "=IS_SAME(CREATED_TIME(), TODAY(), 'day')"}
+        }
+      },
+      "id": "dr222222-2222-8901-bcde-f23456789012",
+      "name": "Get Today",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/YOUR_AIRTABLE_BASE_ID/Contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {
+          "qs": {"filterByFormula": "=DATETIME_DIFF(NOW(), CREATED_TIME(), 'days') <= 7"}
+        }
+      },
+      "id": "dr333333-3333-9012-cdef-345678901234",
+      "name": "Get Week",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = $('Get Today').item.json.records || [];\nconst week = $('Get Week').item.json.records || [];\n\nlet metrics = { new: today.length, hot: 0, warm: 0, cold: 0, contacted: 0, sources: {} };\n\nfor (const r of today) {\n  const f = r.fields;\n  if (f.Tier === 'Hot') metrics.hot++;\n  else if (f.Tier === 'Warm') metrics.warm++;\n  else metrics.cold++;\n  if (['Contacted','Nurturing','Qualified'].includes(f.Status)) metrics.contacted++;\n  const src = f.Source || 'Unknown';\n  metrics.sources[src] = (metrics.sources[src] || 0) + 1;\n}\n\nlet weekConverted = 0, totalScore = 0, scoreCount = 0;\nfor (const r of week) {\n  if (r.fields.Status === 'Converted') weekConverted++;\n  if (r.fields.LeadScore) { totalScore += r.fields.LeadScore; scoreCount++; }\n}\n\nlet topSource = 'N/A', topCount = 0;\nfor (const [s, c] of Object.entries(metrics.sources)) {\n  if (c > topCount) { topSource = s; topCount = c; }\n}\n\n// Generate insights without AI\nlet insights = [];\nif (metrics.hot > 0) insights.push(`${metrics.hot} hot lead(s) need immediate attention!`);\nif (metrics.rate >= 50) insights.push('Great contact rate today!');\nelse if (metrics.new > 0 && metrics.rate < 30) insights.push('Consider following up with more leads.');\nif (topSource !== 'N/A') insights.push(`${topSource} is your top lead source.`);\n\nreturn {\n  json: {\n    new_leads: metrics.new,\n    hot: metrics.hot,\n    warm: metrics.warm,\n    cold: metrics.cold,\n    contacted: metrics.contacted,\n    rate: metrics.new > 0 ? Math.round((metrics.contacted / metrics.new) * 100) : 0,\n    top_source: topSource,\n    week_total: week.length,\n    week_converted: weekConverted,\n    avg_score: scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : 0,\n    insights: insights.join(' ') || 'Keep up the good work!',\n    date: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })\n  }\n};"
+      },
+      "id": "dr555555-5555-1234-efab-567890123456",
+      "name": "Calculate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "harshilyogi077@gmail.com",
+        "subject": "=Daily CRM Report - {{ $json.date }} - {{ $json.new_leads }} new leads",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n<h2 style=\"color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;\">Daily CRM Report</h2>\n<p style=\"color: #666;\">{{ $json.date }}</p>\n\n<table style=\"border-collapse: collapse; width: 100%; margin: 20px 0;\">\n<tr style=\"background: #f8f9fa;\">\n<td style=\"padding: 12px; border: 1px solid #dee2e6; font-weight: bold;\">New Leads</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6; font-size: 18px; font-weight: bold; color: #4CAF50;\">{{ $json.new_leads }}</td>\n</tr>\n<tr>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Hot Leads</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6; color: #dc3545; font-weight: bold;\">{{ $json.hot }}</td>\n</tr>\n<tr style=\"background: #f8f9fa;\">\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Warm Leads</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6; color: #fd7e14;\">{{ $json.warm }}</td>\n</tr>\n<tr>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Cold Leads</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">{{ $json.cold }}</td>\n</tr>\n<tr style=\"background: #e8f5e9;\">\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Contacted</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">{{ $json.contacted }}</td>\n</tr>\n<tr>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Contact Rate</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">{{ $json.rate }}%</td>\n</tr>\n<tr style=\"background: #f8f9fa;\">\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Top Source</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">{{ $json.top_source }}</td>\n</tr>\n<tr>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">Avg Lead Score</td>\n<td style=\"padding: 12px; border: 1px solid #dee2e6;\">{{ $json.avg_score }}/10</td>\n</tr>\n</table>\n\n<div style=\"background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;\">\n<strong>This Week:</strong> {{ $json.week_total }} total leads | {{ $json.week_converted }} conversions\n</div>\n\n<div style=\"background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;\">\n<strong>Insights:</strong> {{ $json.insights }}\n</div>\n\n<hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n<p style=\"color: #999; font-size: 12px;\">Auto-generated daily report at 8:00 PM</p>\n</div>",
+        "options": {"appendAttribution": false}
+      },
+      "id": "dr777777-7777-3456-abcd-789012345678",
+      "name": "Send Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1120, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 8 PM": {
+      "main": [[{"node": "Get Today", "type": "main", "index": 0}]]
+    },
+    "Get Today": {
+      "main": [[{"node": "Get Week", "type": "main", "index": 0}]]
+    },
+    "Get Week": {
+      "main": [[{"node": "Calculate", "type": "main", "index": 0}]]
+    },
+    "Calculate": {
+      "main": [[{"node": "Send Report", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "4"
+}
